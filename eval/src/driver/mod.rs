@@ -54,7 +54,14 @@ impl Program {
                 };
 
             },
-            Ok(ProgramAction::Show(order,expr)) => println!("Eval not yet implemented")
+            Ok(ProgramAction::Show(order,expr)) => {
+                let expr = match eval::ExprTree::parse(order,expr) {
+                    Err(e)   => { e.print(); return; },
+                    Ok(expr) => expr
+                };
+
+                expr.print();
+            }
         }
     }
 
