@@ -13,7 +13,6 @@ pub enum ProgramError {
     NotEnoughActionArgs,
     InvalidActionArgument,
     InvalidAction,
-    EvalError(eval::EvalError)
 }
 
 pub struct Program {
@@ -141,7 +140,6 @@ impl ProgramError {
     /// Print errors
     fn print(&self) {
         match self {
-            ProgramError::EvalError(e) => e.print(),
             ProgramError::InvalidActionArgument => {
                 eprintln!("🚨 Esos argumentos no son validos para esta accion");
             },

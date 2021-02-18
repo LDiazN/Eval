@@ -23,8 +23,6 @@ pub enum EvalError {
     InvalidSymbol(String)
 }
 
-
-
 pub fn eval(order : Order, expr : Expr) -> Result<i32, EvalError> {
     match order {
         Order::Pre  => eval_pre(expr),
@@ -106,7 +104,6 @@ fn eval_pre(expr : Expr) -> Result<i32, EvalError> {
     }
 }
 
-
 fn eval_expr(opr : char, left : i32, right : i32) -> i32 {
     match opr {
         '/' => left / right,
@@ -119,7 +116,12 @@ fn eval_expr(opr : char, left : i32, right : i32) -> i32 {
 
 impl EvalError {
     pub fn print(&self){
-
+        match self {
+            EvalError::InvalidSymbol(s)   => eprintln!("🚨 This is not a valid symbol: {}", s),
+            EvalError::InvalidSyntax(ord) => eprintln!("🚨 This is not a valid syntax for a {} order expression ", 
+                match ord {Order::Post => "post", _ => "pre"}
+            )
+        }
     }
 }
 
@@ -134,19 +136,57 @@ impl ExprTree {
     pub fn print(&self) {
         fn print_aux(exp : &ExprTree) {
             match exp {
-                ExprTree::Num(e) => print!(" {} ", e),
+                ExprTree::Num(e) => print!("{}", e),
                 ExprTree::Tree(c, t1, t2) => {
-                    print!("(");
-                    print_aux(t1);
+
+                    let curr_prec = ExprTree::get_prec(c);
+
+                    let should_parenth_t1 = match **t1 {
+                        ExprTree::Tree(c,_,_) => ExprTree::get_prec(&c) < curr_prec ,
+                        _ => { false } 
+                    };
+
+                    let should_parenth_t2 = match **t2 {
+                        ExprTree::Tree(c,_,_) => ExprTree::get_prec(&c) < curr_prec,
+                        _ => { false } 
+                    };
+
+                    if should_parenth_t1 {
+                        print!("( ");
+                        print_aux(t1);
+                        print!(" )");
+                    }
+                    else{
+                        print_aux(t1);
+                    }
+
                     print!(" {} ", c);
-                    print_aux(t2);
-                    print!(")");
+
+                    if should_parenth_t2 {
+                        print!("( ");
+                        print_aux(t2);
+                        print!(" )");
+                    }
+                    else {
+                        print_aux(t2);
+                    }                    
                 }
             }
         }
-
         print_aux(self);
         println!("");
+    }
+
+    fn get_prec (opr1 : &char) -> i32 {
+        use std::collections::HashMap;
+
+        let mut prec = HashMap::new();
+        prec.insert('/', 2);
+        prec.insert('*', 2);
+        prec.insert('+', 1);
+        prec.insert('-', 1);
+
+        *prec.get(&opr1).unwrap()
     }
 
     fn parse_pre(expr : Expr) -> Result<ExprTree, EvalError> {
