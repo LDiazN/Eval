@@ -8,18 +8,22 @@ pub type Expr = Vec<Symbol>;
 // Me, an intellectual:
 type Stack<T> = Vec<T>;
 
+/// Every possible order for an expression
 #[derive(Debug,PartialEq)]
 pub enum Order {
     Pre,
     Post
 }
 
+/// An expression Tree, with an operator and two sub trees,
+/// or a leaf
 #[derive(Debug, PartialEq)]
 pub enum ExprTree {
     Num (i32),
     Tree (char, Box<ExprTree>, Box<ExprTree>) // (operator, left, right)
 }
 
+/// Every possible evaluation error and some useful related data
 #[derive(Debug, PartialEq)]
 pub enum EvalError {
     InvalidSyntax(Order),
@@ -27,13 +31,22 @@ pub enum EvalError {
     DividingByZero
 }
 
+/// Try to eval an expression with the given order
+/// ## Parameters
+/// * `order : Order` - syntax order used by the evaluator
+/// * `expr  : Expr`  - expression to evaluate as a stream of tokens
+/// ---
+/// ## Return
+///  * `Ok(i : i32)` - if evaluation was correct 
+///  * `Err(e : EvalError)` - if evaluation failed for some reason defined by e
 pub fn eval(order : &Order, expr : Expr) -> Result<i32, EvalError> {
     match order {
-        Order::Pre  => eval_pre(expr),
+        Order::Pre  => eval_pre(expr), // i know pude hacer un eval sobre el ExprTree generico pero se me ocurrio tarde xD
         Order::Post => eval_pos(expr)
     }
 }
 
+/// Eval post order expression, trying to return an i32 valueK
 fn eval_pos(expr : Expr) -> Result<i32, EvalError>{
 
     let mut stack : Stack<i32> = Stack::new();
@@ -75,6 +88,7 @@ fn eval_pos(expr : Expr) -> Result<i32, EvalError>{
     Ok(stack.pop().unwrap())
 }
 
+/// Eval pre order expression, trying to return an i32 value
 fn eval_pre(expr : Expr) -> Result<i32, EvalError> {
     fn eval_pre_aux(expr : &mut Iter<Symbol>) -> Result<i32, EvalError>{
     
@@ -132,6 +146,7 @@ fn eval_expr(opr : char, left : i32, right : i32) -> i32 {
 }
 
 impl EvalError {
+    /// Print error to user in the command line
     pub fn print(&self){
         match self {
             EvalError::InvalidSymbol(s)   => eprintln!("🚨 This is not a valid symbol: {}", s),
@@ -144,6 +159,13 @@ impl EvalError {
 }
 
 impl ExprTree {
+    /// Parse an expresion assuming the given order, returning an expression tree or an error
+    /// ## Parameters
+    /// * `order : Order` - order to assume when parsing expression
+    /// * `expr : Expr`   - expression to parse
+    /// ## Return 
+    /// * `Ok(t : ExprTree)` - where t is the resulting expression tree or
+    /// * `Err(e : EvalError)` - where e is an EvalError with information about the error
     pub fn parse(order : Order, expr : Expr) -> Result<ExprTree, EvalError> {
         match order {
             Order::Pre => ExprTree::parse_pre(expr),
@@ -151,6 +173,8 @@ impl ExprTree {
         }
     }
 
+    /// Print expression tree as an expression in infix order, with the minimum possible ammount of
+    /// parenthesss
     pub fn print(&self) {
         fn print_aux(exp : &ExprTree) {
             match exp {
@@ -195,6 +219,7 @@ impl ExprTree {
         println!("");
     }
 
+    /// get precedence for an operator
     fn get_prec (opr1 : &char) -> i32 {
         use std::collections::HashMap;
 
@@ -207,6 +232,7 @@ impl ExprTree {
         *prec.get(&opr1).unwrap()
     }
 
+    /// parse expresion in pre order into an ExprTree
     fn parse_pre(expr : Expr) -> Result<ExprTree, EvalError> {
         
         fn parse_pre_aux(expr :&mut Iter<Symbol>) -> Result<ExprTree, EvalError>{
@@ -256,6 +282,7 @@ impl ExprTree {
         }
     }
 
+    /// parse expresion in post order into an ExprTree
     fn parse_post(expr : Expr) -> Result<ExprTree, EvalError> {
 
         let mut stack : Stack<ExprTree> = Stack::new();
