@@ -47,7 +47,7 @@ impl Program {
             Err(e) => e.print(),
             Ok(ProgramAction::Exit) => self.exit = true,
             Ok(ProgramAction::Eval(order,exp)) => {
-                match eval::eval(order, exp) {
+                match eval::eval(&order, exp) {
                     Err(e) => e.print(),
                     Ok(i)  => println!("{}",i)
                 };

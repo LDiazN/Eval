@@ -1,5 +1,6 @@
 mod driver;
 mod eval;
+mod test_suite;
 
 fn main() {
     println!("Hello, world!");

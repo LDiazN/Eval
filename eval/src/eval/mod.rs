@@ -2,28 +2,32 @@
 use std::slice::Iter;
 
 
-type Symbol = String;
-type Expr = Vec<Symbol>;
+pub type Symbol = String;
+pub type Expr = Vec<Symbol>;
 // Everyone: oh my gosh rust doesn't have a stack, so useless
 // Me, an intellectual:
 type Stack<T> = Vec<T>;
 
+#[derive(Debug,PartialEq)]
 pub enum Order {
     Pre,
     Post
 }
 
+#[derive(Debug, PartialEq)]
 pub enum ExprTree {
     Num (i32),
     Tree (char, Box<ExprTree>, Box<ExprTree>) // (operator, left, right)
 }
 
+#[derive(Debug, PartialEq)]
 pub enum EvalError {
     InvalidSyntax(Order),
-    InvalidSymbol(String)
+    InvalidSymbol(String),
+    DividingByZero
 }
 
-pub fn eval(order : Order, expr : Expr) -> Result<i32, EvalError> {
+pub fn eval(order : &Order, expr : Expr) -> Result<i32, EvalError> {
     match order {
         Order::Pre  => eval_pre(expr),
         Order::Post => eval_pos(expr)
@@ -48,6 +52,9 @@ fn eval_pos(expr : Expr) -> Result<i32, EvalError>{
             };
 
             let opr = s.chars().next().unwrap();
+
+            // check divide by zero
+            if opr == '/' && r == 0 {return Err(EvalError::DividingByZero);}
 
             stack.push(eval_expr(opr, l, r));
             continue;
@@ -77,6 +84,9 @@ fn eval_pre(expr : Expr) -> Result<i32, EvalError> {
         };
     
         if opr == "/" || opr == "*" || opr == "+" || opr == "-" {
+
+            let opr = opr.chars().next().unwrap();
+
             let l = match eval_pre_aux(expr) {
                 Ok(i) => i,
                 e     => return e
@@ -86,9 +96,13 @@ fn eval_pre(expr : Expr) -> Result<i32, EvalError> {
                 e     => return e
             };
             
-            return Ok(eval_expr(opr.chars().next().unwrap(), l, r))
+            // check divide by zero
+            if opr == '/' && r == 0 {return Err(EvalError::DividingByZero);}
+
+            return Ok(eval_expr(opr, l, r))
         };
     
+        // maybe our operator is a number instead?
         match opr.parse::<i32>() {
             Err(_) => Err(EvalError::InvalidSymbol(opr.to_string())),
             Ok(i)  => Ok(i)
@@ -97,11 +111,14 @@ fn eval_pre(expr : Expr) -> Result<i32, EvalError> {
 
     let mut expr = expr.iter();
     let out = eval_pre_aux(&mut expr);
+
+    // if something went wrong, return the error
+    if out.is_err() { return out }
+
+    // if there's something else in expresion, that's not a valid expression
+    if expr.next().is_some() { return Err(EvalError::InvalidSyntax(Order::Pre)) }
     
-    match expr.next() {
-        None => out,
-        _    => Err(EvalError::InvalidSyntax(Order::Pre))
-    }
+    out 
 }
 
 fn eval_expr(opr : char, left : i32, right : i32) -> i32 {
@@ -120,7 +137,8 @@ impl EvalError {
             EvalError::InvalidSymbol(s)   => eprintln!("🚨 This is not a valid symbol: {}", s),
             EvalError::InvalidSyntax(ord) => eprintln!("🚨 This is not a valid syntax for a {} order expression ", 
                 match ord {Order::Post => "post", _ => "pre"}
-            )
+            ),
+            EvalError::DividingByZero => eprintln!("🤯 You can't divide by zer0 🤯")
         }
     }
 }
